@@ -358,34 +358,45 @@ async def run_scraper() -> List[Vaga]:
     all_vagas = []
     async with async_playwright() as p:
         browser = await p.chromium.launch(headless=True)
-        context = await browser.new_context(user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
+        context = await browser.new_context(
+            user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            viewport={"width": 1920, "height": 1080},
+            locale="pt-BR",
+            timezone_id="America/Sao_Paulo"
+        )
         page = await context.new_page()
-        
-        if WORKANNA_EMAIL and WORKANNA_PASSWORD:
-            if await login_workana(page):
-                for term in SEARCH_TERMS:
-                    logger.info(f"Buscando Workana: {term}")
-                    vagas = await search_workana(page, term)
-                    all_vagas.extend(vagas)
-                    await asyncio.sleep(2)
-        
-        if FREELAS_EMAIL and FREELAS_PASSWORD:
-            if await login_99freelas(page):
-                for term in SEARCH_TERMS:
-                    logger.info(f"Buscando 99freelas: {term}")
-                    vagas = await search_99freelas(page, term)
-                    all_vagas.extend(vagas)
-                    await asyncio.sleep(2)
-        
+
+        # Workana - busca pública (não precisa login para ver listagem)
+        logger.info("Buscando Workana (publico)...")
+        for term in SEARCH_TERMS:
+            try:
+                logger.info(f"Buscando Workana: {term}")
+                vagas = await search_workana(page, term)
+                all_vagas.extend(vagas)
+                await asyncio.sleep(3)
+            except Exception as e:
+                logger.error(f"Erro busca Workana '{term}': {e}")
+
+        # 99freelas - busca pública
+        logger.info("Buscando 99freelas (publico)...")
+        for term in SEARCH_TERMS:
+            try:
+                logger.info(f"Buscando 99freelas: {term}")
+                vagas = await search_99freelas(page, term)
+                all_vagas.extend(vagas)
+                await asyncio.sleep(3)
+            except Exception as e:
+                logger.error(f"Erro busca 99freelas '{term}': {e}")
+
         await browser.close()
-    
+
     seen = set()
     unique_vagas = []
     for v in all_vagas:
         if v.url not in seen:
             seen.add(v.url)
             unique_vagas.append(v)
-    
+
     unique_vagas.sort(key=lambda x: x.score, reverse=True)
     logger.info(f"Total vagas unicas: {len(unique_vagas)}")
     return unique_vagas
