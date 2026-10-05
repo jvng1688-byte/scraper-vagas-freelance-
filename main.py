@@ -170,40 +170,71 @@ async def search_workana(page, term: str) -> List[Vaga]:
     try:
         search_url = f"https://www.workana.com/jobs?query={term.replace(' ', '%20')}&category=it-programming&subcategory=scripting-automations"
         await page.goto(search_url, wait_until="networkidle")
-        await page.wait_for_selector(".project-card, .job-card, [data-cy='project-card']", timeout=10000)
-        cards = await page.query_selector_all(".project-card, .job-card, [data-cy='project-card']")
-        
+        # Seletores mais genéricos para cards de vaga
+        card_selectors = [
+            "[data-cy='project-card']",
+            ".project-card",
+            ".job-card",
+            "article",
+            ".project-item",
+            "[data-testid='project-card']",
+            "div[class*='card']:has(a[href*='/job/'])",
+            "div[class*='project']:has(a[href*='/job/'])",
+            "li:has(a[href*='/job/'])",
+            ".list-item:has(a[href*='/job/'])"
+        ]
+        cards = []
+        for sel in card_selectors:
+            try:
+                await page.wait_for_selector(sel, timeout=5000)
+                cards = await page.query_selector_all(sel)
+                if cards:
+                    logger.debug(f"Workana: encontrou {len(cards)} cards com seletor: {sel}")
+                    break
+            except:
+                continue
+        if not cards:
+            logger.warning(f"Workana: nenhum card encontrado para '{term}'")
+            return vagas
+
         for card in cards[:20]:
             try:
-                titulo_el = await card.query_selector("h2 a, .project-title a, [data-cy='project-title']")
+                # Título e URL - busca qualquer link que pareça de vaga
+                titulo_el = await card.query_selector("a[href*='/job/'], h2 a, h3 a, .title a, [data-cy='project-title']")
                 titulo = await titulo_el.inner_text() if titulo_el else "Sem titulo"
                 url = await titulo_el.get_attribute("href") if titulo_el else ""
                 if url and not url.startswith("http"): url = f"https://www.workana.com{url}"
-                
-                desc_el = await card.query_selector(".project-description, .description, [data-cy='project-description']")
+
+                # Descrição
+                desc_el = await card.query_selector("[data-cy='project-description'], .description, .project-description, p, .text")
                 descricao = await desc_el.inner_text() if desc_el else ""
-                
-                orc_el = await card.query_selector(".budget, .project-budget, [data-cy='budget']")
+
+                # Orçamento
+                orc_el = await card.query_selector("[data-cy='budget'], .budget, .project-budget, .price, [class*='budget']")
                 orcamento = await orc_el.inner_text() if orc_el else "Nao informado"
-                
-                prazo_el = await card.query_selector(".deadline, .project-deadline, [data-cy='deadline']")
+
+                # Prazo
+                prazo_el = await card.query_selector("[data-cy='deadline'], .deadline, .project-deadline, .time, [class*='deadline']")
                 prazo = await prazo_el.inner_text() if prazo_el else "Nao informado"
-                
-                skills_els = await card.query_selector_all(".skill-tag, .tag, [data-cy='skill']")
+
+                # Skills
+                skills_els = await card.query_selector_all("[data-cy='skill'], .skill-tag, .tag, .skill, [class*='skill'], [class*='tag']")
                 habilidades = [await s.inner_text() for s in skills_els]
-                
-                prop_el = await card.query_selector(".proposals, .project-proposals, [data-cy='proposals']")
+
+                # Propostas
+                prop_el = await card.query_selector("[data-cy='proposals'], .proposals, .project-proposals, .count, [class*='proposal']")
                 propostas_text = await prop_el.inner_text() if prop_el else "0"
                 propostas = int(''.join(filter(str.isdigit, propostas_text))) if propostas_text else 0
-                
-                cliente_el = await card.query_selector(".client-info, [data-cy='client']")
+
+                # Cliente
+                cliente_el = await card.query_selector("[data-cy='client'], .client-info, .client, .user, [class*='client']")
                 cliente_text = await cliente_el.inner_text() if cliente_el else ""
                 import re
                 aval_match = re.search(r"(\d[.,]\d)", cliente_text)
                 avaliacao = float(aval_match.group(1).replace(",", ".")) if aval_match else 0
                 proj_match = re.search(r"(\d+)\s*projet", cliente_text, re.I)
                 projetos = int(proj_match.group(1)) if proj_match else 0
-                
+
                 vaga = Vaga(
                     plataforma="Workana", titulo=titulo.strip(), descricao=descricao.strip()[:500],
                     orcamento=orcamento.strip(), prazo=prazo.strip(), habilidades=habilidades,
@@ -303,40 +334,71 @@ async def search_99freelas(page, term: str) -> List[Vaga]:
     try:
         search_url = f"https://www.99freelas.com.br/projects?search={term.replace(' ', '%20')}"
         await page.goto(search_url, wait_until="networkidle")
-        await page.wait_for_selector(".project-card, .job-item, [data-testid='project-card']", timeout=10000)
-        cards = await page.query_selector_all(".project-card, .job-item, [data-testid='project-card']")
-        
+        # Seletores mais genéricos para cards de vaga
+        card_selectors = [
+            "[data-testid='project-card']",
+            ".project-card",
+            ".job-item",
+            "article",
+            ".project-item",
+            "[data-cy='project-card']",
+            "div[class*='card']:has(a[href*='/project/'])",
+            "div[class*='project']:has(a[href*='/project/'])",
+            "li:has(a[href*='/project/'])",
+            ".list-item:has(a[href*='/project/'])"
+        ]
+        cards = []
+        for sel in card_selectors:
+            try:
+                await page.wait_for_selector(sel, timeout=5000)
+                cards = await page.query_selector_all(sel)
+                if cards:
+                    logger.debug(f"99freelas: encontrou {len(cards)} cards com seletor: {sel}")
+                    break
+            except:
+                continue
+        if not cards:
+            logger.warning(f"99freelas: nenhum card encontrado para '{term}'")
+            return vagas
+
         for card in cards[:20]:
             try:
-                titulo_el = await card.query_selector("h3 a, .project-title a, [data-testid='title']")
+                # Título e URL - busca qualquer link que pareça de projeto
+                titulo_el = await card.query_selector("a[href*='/project/'], h3 a, h2 a, .title a, [data-testid='title']")
                 titulo = await titulo_el.inner_text() if titulo_el else "Sem titulo"
                 url = await titulo_el.get_attribute("href") if titulo_el else ""
                 if url and not url.startswith("http"): url = f"https://www.99freelas.com.br{url}"
-                
-                desc_el = await card.query_selector(".description, .project-description, [data-testid='description']")
+
+                # Descrição
+                desc_el = await card.query_selector("[data-testid='description'], .description, .project-description, p, .text")
                 descricao = await desc_el.inner_text() if desc_el else ""
-                
-                orc_el = await card.query_selector(".budget, .value, [data-testid='budget']")
+
+                # Orçamento
+                orc_el = await card.query_selector("[data-testid='budget'], .budget, .value, .price, [class*='budget']")
                 orcamento = await orc_el.inner_text() if orc_el else "Nao informado"
-                
-                prazo_el = await card.query_selector(".deadline, .time, [data-testid='deadline']")
+
+                # Prazo
+                prazo_el = await card.query_selector("[data-testid='deadline'], .deadline, .time, [class*='deadline']")
                 prazo = await prazo_el.inner_text() if prazo_el else "Nao informado"
-                
-                skills_els = await card.query_selector_all(".tag, .skill, [data-testid='skill']")
+
+                # Skills
+                skills_els = await card.query_selector_all("[data-testid='skill'], .tag, .skill, [class*='skill'], [class*='tag']")
                 habilidades = [await s.inner_text() for s in skills_els]
-                
-                prop_el = await card.query_selector(".proposals, .count, [data-testid='proposals']")
+
+                # Propostas
+                prop_el = await card.query_selector("[data-testid='proposals'], .proposals, .count, [class*='proposal']")
                 propostas_text = await prop_el.inner_text() if prop_el else "0"
                 propostas = int(''.join(filter(str.isdigit, propostas_text))) if propostas_text else 0
-                
-                cliente_el = await card.query_selector(".client, .user, [data-testid='client']")
+
+                # Cliente
+                cliente_el = await card.query_selector("[data-testid='client'], .client, .user, [class*='client']")
                 cliente_text = await cliente_el.inner_text() if cliente_el else ""
                 import re
                 aval_match = re.search(r"(\d[.,]\d)", cliente_text)
                 avaliacao = float(aval_match.group(1).replace(",", ".")) if aval_match else 0
                 proj_match = re.search(r"(\d+)\s*projet", cliente_text, re.I)
                 projetos = int(proj_match.group(1)) if proj_match else 0
-                
+
                 vaga = Vaga(
                     plataforma="99freelas", titulo=titulo.strip(), descricao=descricao.strip()[:500],
                     orcamento=orcamento.strip(), prazo=prazo.strip(), habilidades=habilidades,
