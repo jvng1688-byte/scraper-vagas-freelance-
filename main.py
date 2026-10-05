@@ -95,10 +95,69 @@ def calculate_score(vaga: Vaga) -> float:
 async def login_workana(page) -> bool:
     try:
         await page.goto("https://www.workana.com/login", wait_until="networkidle")
-        await page.fill('input[name="email"]', WORKANNA_EMAIL)
-        await page.fill('input[name="password"]', WORKANNA_PASSWORD)
-        await page.click('button[type="submit"]')
-        await page.wait_for_url("**/dashboard**", timeout=15000)
+        # Tenta múltiplos seletores para email
+        email_selectors = [
+            'input[name="email"]',
+            'input[type="email"]',
+            'input[id*="email" i]',
+            'input[placeholder*="email" i]',
+            'input[autocomplete="email"]',
+            '#email',
+            '#user_email'
+        ]
+        for sel in email_selectors:
+            try:
+                await page.wait_for_selector(sel, timeout=5000, state="visible")
+                await page.fill(sel, WORKANNA_EMAIL)
+                logger.debug(f"Email Workana preenchido com seletor: {sel}")
+                break
+            except:
+                continue
+        else:
+            raise Exception("Nenhum seletor de email funcionou")
+
+        # Tenta múltiplos seletores para password
+        pwd_selectors = [
+            'input[name="password"]',
+            'input[type="password"]',
+            'input[id*="password" i]',
+            'input[placeholder*="senha" i]',
+            'input[autocomplete="current-password"]',
+            '#password',
+            '#user_password'
+        ]
+        for sel in pwd_selectors:
+            try:
+                await page.wait_for_selector(sel, timeout=5000, state="visible")
+                await page.fill(sel, WORKANNA_PASSWORD)
+                logger.debug(f"Password Workana preenchido com seletor: {sel}")
+                break
+            except:
+                continue
+        else:
+            raise Exception("Nenhum seletor de password funcionou")
+
+        # Botão submit
+        submit_selectors = [
+            'button[type="submit"]',
+            'button:has-text("Entrar")',
+            'button:has-text("Login")',
+            'input[type="submit"]',
+            '.btn-login',
+            '#login-button'
+        ]
+        for sel in submit_selectors:
+            try:
+                await page.wait_for_selector(sel, timeout=5000, state="visible")
+                await page.click(sel)
+                logger.debug(f"Submit Workana clicado com seletor: {sel}")
+                break
+            except:
+                continue
+        else:
+            raise Exception("Nenhum seletor de submit funcionou")
+
+        await page.wait_for_url("**/dashboard**", timeout=20000)
         logger.info("Login Workana OK")
         return True
     except Exception as e:
@@ -165,10 +224,73 @@ async def search_workana(page, term: str) -> List[Vaga]:
 async def login_99freelas(page) -> bool:
     try:
         await page.goto("https://www.99freelas.com.br/login", wait_until="networkidle")
-        await page.fill('input[name="email"]', FREELAS_EMAIL)
-        await page.fill('input[name="password"]', FREELAS_PASSWORD)
-        await page.click('button[type="submit"]')
-        await page.wait_for_url("**/dashboard**", timeout=15000)
+        # Tenta múltiplos seletores para email
+        email_selectors = [
+            'input[name="email"]',
+            'input[type="email"]',
+            'input[id*="email" i]',
+            'input[placeholder*="email" i]',
+            'input[autocomplete="email"]',
+            '#email',
+            '#user_email',
+            '#login_email'
+        ]
+        for sel in email_selectors:
+            try:
+                await page.wait_for_selector(sel, timeout=5000, state="visible")
+                await page.fill(sel, FREELAS_EMAIL)
+                logger.debug(f"Email 99freelas preenchido com seletor: {sel}")
+                break
+            except:
+                continue
+        else:
+            raise Exception("Nenhum seletor de email funcionou")
+
+        # Tenta múltiplos seletores para password
+        pwd_selectors = [
+            'input[name="password"]',
+            'input[type="password"]',
+            'input[id*="password" i]',
+            'input[placeholder*="senha" i]',
+            'input[autocomplete="current-password"]',
+            '#password',
+            '#user_password',
+            '#login_password'
+        ]
+        for sel in pwd_selectors:
+            try:
+                await page.wait_for_selector(sel, timeout=5000, state="visible")
+                await page.fill(sel, FREELAS_PASSWORD)
+                logger.debug(f"Password 99freelas preenchido com seletor: {sel}")
+                break
+            except:
+                continue
+        else:
+            raise Exception("Nenhum seletor de password funcionou")
+
+        # Botão submit
+        submit_selectors = [
+            'button[type="submit"]',
+            'button:has-text("Entrar")',
+            'button:has-text("Acessar")',
+            'button:has-text("Login")',
+            'input[type="submit"]',
+            '.btn-login',
+            '#login-button',
+            '#btn-login'
+        ]
+        for sel in submit_selectors:
+            try:
+                await page.wait_for_selector(sel, timeout=5000, state="visible")
+                await page.click(sel)
+                logger.debug(f"Submit 99freelas clicado com seletor: {sel}")
+                break
+            except:
+                continue
+        else:
+            raise Exception("Nenhum seletor de submit funcionou")
+
+        await page.wait_for_url("**/dashboard**", timeout=20000)
         logger.info("Login 99freelas OK")
         return True
     except Exception as e:
