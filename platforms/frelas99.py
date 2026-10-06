@@ -47,9 +47,20 @@ class Freelas99Scraper(ScraperBase):
             if "verificação de segurança" in body_text.lower() or "captcha" in body_text.lower() or "cloudflare" in body_text.lower():
                 logger.warning(f"{self.platform_name}: possível bloqueio Cloudflare/challenge detectado")
             
-            # DEBUG: log first 15000 chars of body HTML at INFO level to see structure
+            # DEBUG: log first 30000 chars of body HTML at INFO level to see structure
             body_html = await self.page.inner_html("body")
-            logger.info(f"{self.platform_name}: body preview (15000 chars): {body_html[:15000]}")
+            logger.info(f"{self.platform_name}: body preview (30000 chars): {body_html[:30000]}")
+            
+            # DEBUG: also try to find project list container specifically
+            try:
+                project_list = await self.page.query_selector(".box-projects, .search-results, .projects-list, [data-testid='projects-list'], .projects-grid")
+                if project_list:
+                    list_html = await project_list.inner_html()
+                    logger.info(f"{self.platform_name}: project list container HTML (5000 chars): {list_html[:5000]}")
+                else:
+                    logger.warning(f"{self.platform_name}: project list container NÃO encontrado com seletores comuns")
+            except Exception as e:
+                logger.warning(f"{self.platform_name}: erro ao buscar project list container: {e}")
 
             # Seletores para cards de projeto - tenta específicos primeiro, cai para genéricos
             card_selectors_specific = [
