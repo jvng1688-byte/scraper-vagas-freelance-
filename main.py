@@ -170,6 +170,12 @@ async def search_workana(page, term: str) -> List[Vaga]:
     try:
         search_url = f"https://www.workana.com/jobs?query={term.replace(' ', '%20')}&category=it-programming&subcategory=scripting-automations"
         await page.goto(search_url, wait_until="networkidle")
+        
+        # DEBUG: log page title and URL
+        page_title = await page.title()
+        logger.debug(f"Workana page title: {page_title}")
+        logger.debug(f"Workana current URL: {page.url}")
+        
         # Seletores simplificados (sem :has que pode não funcionar)
         card_selectors = [
             "[data-cy='project-card']",
@@ -190,11 +196,18 @@ async def search_workana(page, term: str) -> List[Vaga]:
                 cards = await page.query_selector_all(sel)
                 if cards:
                     logger.debug(f"Workana: encontrou {len(cards)} cards com seletor: {sel}")
+                    # DEBUG: log first card HTML snippet
+                    if cards:
+                        first_html = await cards[0].inner_html()
+                        logger.debug(f"Workana first card HTML (200 chars): {first_html[:200]}")
                     break
             except:
                 continue
         if not cards:
             logger.warning(f"Workana: nenhum card encontrado para '{term}'")
+            # DEBUG: log page content snippet
+            body_html = await page.inner_html("body")
+            logger.debug(f"Workana page body (500 chars): {body_html[:500]}")
             return vagas
 
         for card in cards[:30]:  # aumenta limite
