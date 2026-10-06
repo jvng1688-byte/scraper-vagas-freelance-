@@ -47,8 +47,8 @@ class Freelas99Scraper(ScraperBase):
             if "verificação de segurança" in body_text.lower() or "captcha" in body_text.lower() or "cloudflare" in body_text.lower():
                 logger.warning(f"{self.platform_name}: possível bloqueio Cloudflare/challenge detectado")
             
-            # DEBUG: log first 1000 chars of body
-            logger.debug(f"{self.platform_name}: body preview (1000 chars): {body_text[:1000]}")
+            # DEBUG: log first 2000 chars of body at INFO level to see structure
+            logger.info(f"{self.platform_name}: body preview (2000 chars): {body_text[:2000]}")
 
             # Seletores para cards de projeto - tenta específicos primeiro, cai para genéricos
             card_selectors_specific = [
