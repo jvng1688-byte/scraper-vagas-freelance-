@@ -37,17 +37,21 @@ class Freelas99Scraper(ScraperBase):
             search_url = f"https://www.99freelas.com.br/projects?search={term.replace(' ', '%20')}"
             await self.page.goto(search_url, wait_until="networkidle")
 
-            # Seletores para cards de projeto
+            # Seletores para cards de projeto - prioriza seletores específicos de resultados de busca
             card_selectors = [
+                # Seletores específicos de lista de resultados
+                "[data-testid='projects-list'] [data-testid='project-card']",
+                "[data-testid='projects-list'] .project-card",
+                ".projects-list .project-card",
+                ".search-results .project-card",
+                ".results-container .project-card",
+                "[data-cy='projects-list'] [data-cy='project-card']",
+                # Seletores genéricos de card (fallback)
                 "[data-testid='project-card']",
                 ".project-card",
                 ".job-item",
                 "article",
                 ".project-item",
-                "div[class*='card']",
-                "div[class*='project']",
-                "li",
-                ".list-item"
             ]
             cards = []
             for sel in card_selectors:
@@ -63,6 +67,18 @@ class Freelas99Scraper(ScraperBase):
             if not cards:
                 logger.warning(f"{self.platform_name}: nenhum card encontrado para '{term}'")
                 return vagas
+
+            # DEBUG: log first few card URLs to verify they're different
+            for i, card in enumerate(cards[:5]):
+                try:
+                    titulo_el = await card.query_selector("a[href*='/project/']")
+                    if titulo_el:
+                        url = await titulo_el.get_attribute("href")
+                        if url and not url.startswith("http"):
+                            url = f"https://www.99freelas.com.br{url}"
+                        logger.debug(f"  Card {i+1} URL: {url}")
+                except:
+                    pass
 
             for card in cards[:30]:
                 try:
