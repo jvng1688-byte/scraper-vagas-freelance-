@@ -78,53 +78,54 @@ class Freelas99Scraper(ScraperBase):
                 logger.warning(f"{self.platform_name}: container específico não encontrado, usando body")
             
             # Search for project cards within container
-            # Based on 99freelas structure, cards are typically in elements with project links
-            card_selectors = [
-                # Most specific first
-                "article.project-item a[href*='/project/']",
-                ".project-item a[href*='/project/']",
-                ".project-card a[href*='/project/']",
-                "[data-testid='project-card'] a[href*='/project/']",
-                ".job-item a[href*='/project/']",
-                # Generic fallback - any link to project
-                "a[href*='/project/']"
-            ]
+            # Strategy: find all project links, then get their parent card elements
+            project_links = await project_list.query_selector_all("a[href*='/project/']")
             
             cards = []
-            for sel in card_selectors:
+            seen_urls = set()
+            for link in project_links[:40]:  # check more links
                 try:
-                    elements = await project_list.query_selector_all(sel)
-                    if elements:
-                        # For link-based selectors, get parent card element
-                        if "a[href*='/project/']" in sel and not sel.startswith("article"):
-                            # Get parent elements that look like cards
-                            cards = []
-                            for el in elements[:30]:
-                                parent = await el.query_selector("xpath=ancestor::*[contains(@class, 'item') or contains(@class, 'card') or contains(@class, 'project')][1]")
-                                if parent:
-                                    cards.append(parent)
-                                else:
-                                    cards.append(el)
-                        else:
-                            cards = elements[:30]
-                        
-                        if cards:
-                            logger.info(f"{self.platform_name}: encontrou {len(cards)} cards com seletor: {sel}")
+                    url = await link.get_attribute("href")
+                    if not url or '/project/' not in url or '/project/new' in url:
+                        continue
+                    if url in seen_urls:
+                        continue
+                    seen_urls.add(url)
+                    
+                    # Get parent card element (go up to find container with project data)
+                    # Try multiple ancestor levels
+                    card = None
+                    for ancestor_level in range(1, 6):
+                        try:
+                            ancestor = await link.query_selector(f"xpath=ancestor::*[{ancestor_level}][contains(@class, 'item') or contains(@class, 'card') or contains(@class, 'project') or contains(@class, 'box')]")
+                            if ancestor:
+                                # Check if this ancestor has meaningful content (more than just the link)
+                                text = await ancestor.inner_text()
+                                if len(text.strip()) > 50:  # has substantial content
+                                    card = ancestor
+                                    break
+                        except:
+                            continue
+                    
+                    if card:
+                        cards.append(card)
+                        if len(cards) >= 20:
                             break
-                except Exception as e:
-                    logger.debug(f"Seletor {sel} falhou: {e}")
+                except:
                     continue
             
             if not cards:
-                logger.warning(f"{self.platform_name}: nenhum card encontrado para '{term}'")
+                logger.warning(f"{self.platform_name}: nenhum card válido encontrado para '{term}'")
                 return vagas
+            
+            logger.info(f"{self.platform_name}: {len(cards)} cards válidos encontrados")
             
             # DEBUG: log first few card URLs
             for i, card in enumerate(cards[:5]):
                 try:
-                    titulo_el = await card.query_selector("a[href*='/project/']")
-                    if titulo_el:
-                        url = await titulo_el.get_attribute("href")
+                    link_el = await card.query_selector("a[href*='/project/']")
+                    if link_el:
+                        url = await link_el.get_attribute("href")
                         if url and not url.startswith("http"):
                             url = f"https://www.99freelas.com.br{url}"
                         logger.info(f"{self.platform_name}: Card {i+1} URL: {url}")
