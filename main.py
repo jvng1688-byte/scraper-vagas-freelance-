@@ -173,8 +173,8 @@ async def search_workana(page, term: str) -> List[Vaga]:
         
         # DEBUG: log page title and URL
         page_title = await page.title()
-        logger.debug(f"Workana page title: {page_title}")
-        logger.debug(f"Workana current URL: {page.url}")
+        logger.info(f"Workana page title: {page_title}")
+        logger.info(f"Workana current URL: {page.url}")
         
         # Seletores simplificados (sem :has que pode não funcionar)
         card_selectors = [
@@ -195,11 +195,11 @@ async def search_workana(page, term: str) -> List[Vaga]:
                 await page.wait_for_selector(sel, timeout=5000)
                 cards = await page.query_selector_all(sel)
                 if cards:
-                    logger.debug(f"Workana: encontrou {len(cards)} cards com seletor: {sel}")
+                    logger.info(f"Workana: encontrou {len(cards)} cards com seletor: {sel}")
                     # DEBUG: log first card HTML snippet
                     if cards:
                         first_html = await cards[0].inner_html()
-                        logger.debug(f"Workana first card HTML (200 chars): {first_html[:200]}")
+                        logger.info(f"Workana first card HTML (200 chars): {first_html[:200]}")
                     break
             except:
                 continue
@@ -207,7 +207,7 @@ async def search_workana(page, term: str) -> List[Vaga]:
             logger.warning(f"Workana: nenhum card encontrado para '{term}'")
             # DEBUG: log page content snippet
             body_html = await page.inner_html("body")
-            logger.debug(f"Workana page body (500 chars): {body_html[:500]}")
+            logger.info(f"Workana page body (500 chars): {body_html[:500]}")
             return vagas
 
         for card in cards[:30]:  # aumenta limite
