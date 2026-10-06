@@ -37,6 +37,19 @@ class Freelas99Scraper(ScraperBase):
             search_url = f"https://www.99freelas.com.br/projects?search={term.replace(' ', '%20')}"
             await self.page.goto(search_url, wait_until="networkidle")
 
+            # DEBUG: log page title, URL, and body snippet
+            page_title = await self.page.title()
+            logger.info(f"{self.platform_name}: page title: {page_title}")
+            logger.info(f"{self.platform_name}: current URL: {self.page.url}")
+            
+            # DEBUG: check if we're on a challenge/blocked page
+            body_text = await self.page.inner_text("body")
+            if "verificação de segurança" in body_text.lower() or "captcha" in body_text.lower() or "cloudflare" in body_text.lower():
+                logger.warning(f"{self.platform_name}: possível bloqueio Cloudflare/challenge detectado")
+            
+            # DEBUG: log first 1000 chars of body
+            logger.debug(f"{self.platform_name}: body preview (1000 chars): {body_text[:1000]}")
+
             # Seletores para cards de projeto - tenta específicos primeiro, cai para genéricos
             card_selectors_specific = [
                 # Seletores específicos de lista de resultados
