@@ -37,8 +37,8 @@ class Freelas99Scraper(ScraperBase):
             search_url = f"https://www.99freelas.com.br/projects?search={term.replace(' ', '%20')}"
             await self.page.goto(search_url, wait_until="networkidle")
 
-            # Seletores para cards de projeto - prioriza seletores específicos de resultados de busca
-            card_selectors = [
+            # Seletores para cards de projeto - tenta específicos primeiro, cai para genéricos
+            card_selectors_specific = [
                 # Seletores específicos de lista de resultados
                 "[data-testid='projects-list'] [data-testid='project-card']",
                 "[data-testid='projects-list'] .project-card",
@@ -46,6 +46,8 @@ class Freelas99Scraper(ScraperBase):
                 ".search-results .project-card",
                 ".results-container .project-card",
                 "[data-cy='projects-list'] [data-cy='project-card']",
+            ]
+            card_selectors_generic = [
                 # Seletores genéricos de card (fallback)
                 "[data-testid='project-card']",
                 ".project-card",
@@ -53,16 +55,30 @@ class Freelas99Scraper(ScraperBase):
                 "article",
                 ".project-item",
             ]
+            
             cards = []
-            for sel in card_selectors:
+            # Tenta seletores específicos primeiro
+            for sel in card_selectors_specific:
                 try:
-                    await self.page.wait_for_selector(sel, timeout=5000)
+                    await self.page.wait_for_selector(sel, timeout=3000)
                     cards = await self.page.query_selector_all(sel)
                     if cards:
-                        logger.info(f"{self.platform_name}: encontrou {len(cards)} cards com seletor: {sel}")
+                        logger.info(f"{self.platform_name}: encontrou {len(cards)} cards com seletor específico: {sel}")
                         break
                 except:
                     continue
+            
+            # Se não achou, tenta genéricos
+            if not cards:
+                for sel in card_selectors_generic:
+                    try:
+                        await self.page.wait_for_selector(sel, timeout=3000)
+                        cards = await self.page.query_selector_all(sel)
+                        if cards:
+                            logger.info(f"{self.platform_name}: encontrou {len(cards)} cards com seletor genérico: {sel}")
+                            break
+                    except:
+                        continue
 
             if not cards:
                 logger.warning(f"{self.platform_name}: nenhum card encontrado para '{term}'")
