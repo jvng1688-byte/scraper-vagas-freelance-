@@ -170,7 +170,7 @@ async def search_workana(page, term: str) -> List[Vaga]:
     try:
         search_url = f"https://www.workana.com/jobs?query={term.replace(' ', '%20')}&category=it-programming&subcategory=scripting-automations"
         await page.goto(search_url, wait_until="networkidle")
-        # Seletores mais genéricos para cards de vaga
+        # Seletores simplificados (sem :has que pode não funcionar)
         card_selectors = [
             "[data-cy='project-card']",
             ".project-card",
@@ -178,10 +178,10 @@ async def search_workana(page, term: str) -> List[Vaga]:
             "article",
             ".project-item",
             "[data-testid='project-card']",
-            "div[class*='card']:has(a[href*='/job/'])",
-            "div[class*='project']:has(a[href*='/job/'])",
-            "li:has(a[href*='/job/'])",
-            ".list-item:has(a[href*='/job/'])"
+            "div[class*='card']",
+            "div[class*='project']",
+            "li",
+            ".list-item"
         ]
         cards = []
         for sel in card_selectors:
@@ -197,13 +197,17 @@ async def search_workana(page, term: str) -> List[Vaga]:
             logger.warning(f"Workana: nenhum card encontrado para '{term}'")
             return vagas
 
-        for card in cards[:20]:
+        for card in cards[:30]:  # aumenta limite
             try:
                 # Título e URL - busca qualquer link que pareça de vaga
                 titulo_el = await card.query_selector("a[href*='/job/'], h2 a, h3 a, .title a, [data-cy='project-title']")
                 titulo = await titulo_el.inner_text() if titulo_el else "Sem titulo"
                 url = await titulo_el.get_attribute("href") if titulo_el else ""
                 if url and not url.startswith("http"): url = f"https://www.workana.com{url}"
+                
+                # FILTRA: ignora se não tem URL de job válida
+                if not url or '/job/' not in url:
+                    continue
 
                 # Descrição
                 desc_el = await card.query_selector("[data-cy='project-description'], .description, .project-description, p, .text")
@@ -334,7 +338,7 @@ async def search_99freelas(page, term: str) -> List[Vaga]:
     try:
         search_url = f"https://www.99freelas.com.br/projects?search={term.replace(' ', '%20')}"
         await page.goto(search_url, wait_until="networkidle")
-        # Seletores mais genéricos para cards de vaga
+        # Seletores simplificados (sem :has que pode não funcionar)
         card_selectors = [
             "[data-testid='project-card']",
             ".project-card",
@@ -342,10 +346,10 @@ async def search_99freelas(page, term: str) -> List[Vaga]:
             "article",
             ".project-item",
             "[data-cy='project-card']",
-            "div[class*='card']:has(a[href*='/project/'])",
-            "div[class*='project']:has(a[href*='/project/'])",
-            "li:has(a[href*='/project/'])",
-            ".list-item:has(a[href*='/project/'])"
+            "div[class*='card']",
+            "div[class*='project']",
+            "li",
+            ".list-item"
         ]
         cards = []
         for sel in card_selectors:
@@ -361,13 +365,20 @@ async def search_99freelas(page, term: str) -> List[Vaga]:
             logger.warning(f"99freelas: nenhum card encontrado para '{term}'")
             return vagas
 
-        for card in cards[:20]:
+        for card in cards[:30]:  # aumenta limite
             try:
                 # Título e URL - busca qualquer link que pareça de projeto
                 titulo_el = await card.query_selector("a[href*='/project/'], h3 a, h2 a, .title a, [data-testid='title']")
                 titulo = await titulo_el.inner_text() if titulo_el else "Sem titulo"
                 url = await titulo_el.get_attribute("href") if titulo_el else ""
                 if url and not url.startswith("http"): url = f"https://www.99freelas.com.br{url}"
+                
+                # FILTRA: ignora se não tem URL de projeto válida OU é página de criar projeto
+                if not url or '/project/' not in url or '/project/new' in url:
+                    continue
+                # FILTRA: ignora títulos genéricos de ruído
+                if titulo.strip().lower() in ["publique um projeto. é grátis.", "publique um projeto", "novo projeto"]:
+                    continue
 
                 # Descrição
                 desc_el = await card.query_selector("[data-testid='description'], .description, .project-description, p, .text")
