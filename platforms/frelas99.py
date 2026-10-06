@@ -1,6 +1,7 @@
 """
 99freelas scraper implementation.
 """
+import asyncio
 import logging
 import re
 from typing import List
@@ -51,6 +52,10 @@ class Freelas99Scraper(ScraperBase):
             body_html = await self.page.inner_html("body")
             logger.info(f"{self.platform_name}: body preview (30000 chars): {body_html[:30000]}")
             
+            # DEBUG: log first 30000 chars of body HTML at INFO level to see structure
+            body_html = await self.page.inner_html("body")
+            logger.info(f"{self.platform_name}: body preview (30000 chars): {body_html[:30000]}")
+            
             # DEBUG: also try to find project list container specifically
             try:
                 project_list = await self.page.query_selector(".box-projects, .search-results, .projects-list, [data-testid='projects-list'], .projects-grid")
@@ -61,6 +66,13 @@ class Freelas99Scraper(ScraperBase):
                     logger.warning(f"{self.platform_name}: project list container NÃO encontrado com seletores comuns")
             except Exception as e:
                 logger.warning(f"{self.platform_name}: erro ao buscar project list container: {e}")
+
+            # ROLAR PÁGINA para carregar mais conteúdo (lazy load)
+            logger.info(f"{self.platform_name}: rolando página para carregar projetos...")
+            await self.page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
+            await asyncio.sleep(2)
+            await self.page.evaluate("window.scrollTo(0, 0)")
+            await asyncio.sleep(1)
 
             # Seletores para cards de projeto - tenta específicos primeiro, cai para genéricos
             card_selectors_specific = [
