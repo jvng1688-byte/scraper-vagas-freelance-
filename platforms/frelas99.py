@@ -148,6 +148,12 @@ class Freelas99Scraper(ScraperBase):
                     if titulo.strip().lower() in ["publique um projeto. é grátis.", "publique um projeto", "novo projeto"]:
                         continue
                     
+                    # NOVO: Filtra projetos apenas para premium
+                    card_text = await card.inner_text()
+                    if "projeto exclusivo" in card_text.lower() or "exclusivo para assinantes" in card_text.lower() or "exclusivo para premium" in card_text.lower():
+                        logger.debug(f"Projeto premium ignorado: {titulo[:50]}")
+                        continue
+                    
                     # Descrição
                     desc_el = await card.query_selector("[data-testid='description'], .description, .project-description, .formatted-text, p")
                     descricao = await desc_el.inner_text() if desc_el else ""
